@@ -109,6 +109,7 @@ class Iris_model():
 		
 		# Train
 		pca.fit(self.X_tr)
+
 		X_tr_pc = pca.transform(self.X_tr)
 		plt.scatter(X_tr_pc[:,0],X_tr_pc[:,1],c=self.y_tr.argmax(1))
 		plt.savefig("train.png")
@@ -123,6 +124,19 @@ class Iris_model():
 		plt.scatter(X_te_pc[:,0],X_te_pc[:,1],c=self.pred_te)
 		plt.savefig("vis_test_pred.png")
 		plt.clf()
+
+		# Get prediction of entire pca (first 2 pcs) space. This is very slow in n!
+		n = 200
+		pc_min = X_tr_pc.min(0)
+		pc_max = X_tr_pc.max(0)
+		x1 = np.linspace(pc_min[0],pc_max[0],n)	
+		x2 = np.linspace(pc_min[1],pc_max[1],n)	
+		x = np.array([np.array([i,j]) for i in x1 for j in x2]) # get all combinations
+		feats = pca.inverse_transform(x)
+		preds = self.model.predict(feats).argmax(1)
+		plt.scatter(x[:,0],x[:,1],c=preds)
+		plt.savefig("pred_pca_space.png")
+		
 
 
 if __name__ == "__main__":
