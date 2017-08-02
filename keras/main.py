@@ -16,7 +16,7 @@ from sklearn import decomposition
 import matplotlib.pyplot as plt
 
 class Iris_model():	
-	def __init__(self,load,save_path,batch_size,learning_rate,test_size=0.2):
+	def __init__(self,n_hidden,load,save_path,batch_size,learning_rate,test_size=0.2):
 		data = load_iris()
 		self.label_names = data.target_names.tolist()
 		self.labels = data.target_names
@@ -29,6 +29,10 @@ class Iris_model():
 		self.lr = learning_rate
 		self.compile(load)
 	
+		# Visualizatio
+		self.pca = decomposition.PCA(n_components=2)
+		self.pca.fit(self.X_tr)
+
 		# Quick vis of train test distrbution for y
 		bins = 3
 		plt.hist(self.y_tr.argmax(1).flatten(),bins=3,ec='black',alpha=0.5,label="Train distribution")
@@ -79,10 +83,10 @@ class Iris_model():
 
 	def compile(self,load=False):
 		model = Sequential()
-		model.add(Dense(10,input_shape=(4,)))
+		model.add(Dense(n_hidden,input_shape=(4,)))
 		model.add(bn())
 		model.add(Activation('relu'))
-		model.add(Dense(10))
+		model.add(Dense(n_hidden))
 		model.add(bn())
 		model.add(Activation('relu'))
 		model.add(Dense(3))
@@ -103,55 +107,52 @@ class Iris_model():
 		print("Saved model in {0}".format(self.save_path))
 
 	def vis_test(self):
-
-		# Pca XY plot
-		pca = decomposition.PCA(n_components=2)
-		
-		# Train
-		pca.fit(self.X_tr)
-
-		X_tr_pc = pca.transform(self.X_tr)
-		plt.scatter(X_tr_pc[:,0],X_tr_pc[:,1],c=self.y_tr.argmax(1))
-		plt.savefig("train.png")
-		plt.clf()
-
 		# Test truth pred
 		self.test() # to get predictions
-		X_te_pc = pca.transform(self.X_te)
+		X_te_pc = self.pca.transform(self.X_te)
 		plt.subplot(121)
 		plt.scatter(X_te_pc[:,0],X_te_pc[:,1],c=self.y_te)
 		plt.subplot(122)
 		plt.scatter(X_te_pc[:,0],X_te_pc[:,1],c=self.pred_te)
-		plt.savefig("vis_test_pred.png")
+		plt.savefig("test_truth_pred.png")
 		plt.clf()
 
-		# Get prediction of entire pca (first 2 pcs) space. This is very slow in n!
+	def vis_train(self):
+
+		# Pca XY plot
+		X_tr_pc = self.pca.transform(self.X_tr)
+
+		# Get prediction of entire pca (first 2 pcs) space. Note O(n*2)!
 		n = 200
 		pc_min = X_tr_pc.min(0)
 		pc_max = X_tr_pc.max(0)
 		x1 = np.linspace(pc_min[0],pc_max[0],n)	
 		x2 = np.linspace(pc_min[1],pc_max[1],n)	
 		x = np.array([np.array([i,j]) for i in x1 for j in x2]) # get all combinations
-		feats = pca.inverse_transform(x)
+		feats = self.pca.inverse_transform(x)
 		preds = self.model.predict(feats).argmax(1)
+		plt.subplot(121)
+		plt.scatter(X_tr_pc[:,0],X_tr_pc[:,1],c=self.y_tr)
+		plt.subplot(122)
 		plt.scatter(x[:,0],x[:,1],c=preds)
-		plt.savefig("pred_pca_space.png")
-		
-
+		plt.savefig("train_boundary.png")
+		plt.clf()
 
 if __name__ == "__main__":
 	batch_size = 5 
-	epochs = 20
+	epochs = 50
 	lr = 0.01
 	test_size = 0.2
-	train = False
+	n_hidden = 400
+	train = True 
 	test = True
-	load = True 
+	load = False 
 	save_path = "weights.h5"
-	iris_model = Iris_model(load,save_path,batch_size,lr,test_size=test_size)	
+	iris_model = Iris_model(n_hidden,load,save_path,batch_size,lr,test_size=test_size)	
 	if train == True:
 		iris_model.train(epochs)
 		iris_model.save()
+		iris_model.vis_train()
 	if test == True:
 		iris_model.vis_test()
 
