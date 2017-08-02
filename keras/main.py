@@ -16,7 +16,7 @@ from sklearn import decomposition
 import matplotlib.pyplot as plt
 
 class Iris_model():	
-	def __init__(self,batch_size,learning_rate,test_size=0.2):
+	def __init__(self,load,save_path,batch_size,learning_rate,test_size=0.2):
 		data = load_iris()
 		self.label_names = data.target_names.tolist()
 		self.labels = data.target_names
@@ -24,9 +24,10 @@ class Iris_model():
 		self.Y = keras.utils.to_categorical(data.target)
 
 		self.X_tr, self.X_te, self.y_tr, self.y_te = train_test_split(self.X,self.Y,test_size=test_size,random_state=1006)
+		self.save_path = save_path
 		self.bs = batch_size
 		self.lr = learning_rate
-		self.compile()
+		self.compile(load)
 	
 		# Quick vis of train test distrbution for y
 		bins = 3
@@ -76,7 +77,7 @@ class Iris_model():
 		print(cm_te)
 		print("*"*20)
 
-	def compile(self):
+	def compile(self,load=False):
 		model = Sequential()
 		model.add(Dense(10,input_shape=(4,)))
 		model.add(bn())
@@ -93,12 +94,15 @@ class Iris_model():
 		self.model = model
 		plot_model(model,show_shapes=True,to_file='model.png',rankdir='TB')
 		model.summary()
+		if load == True:
+			model.load_weights(self.save_path)
+			print("Loaded weights from {0}.".format(self.save_path))
 
-	def save(self,name='weights.h5'):
-		self.model.save(name)
-		print("Saved model in {0}".format(name))
+	def save(self):
+		self.model.save(self.save_path)
+		print("Saved model in {0}".format(self.save_path))
 
-	def pca_plot(self):
+	def vis_test(self):
 
 		# Pca XY plot
 		pca = decomposition.PCA(n_components=2)
@@ -126,8 +130,15 @@ if __name__ == "__main__":
 	epochs = 20
 	lr = 0.01
 	test_size = 0.2
-	iris_model = Iris_model(batch_size,lr,test_size=test_size)	
-	iris_model.train(epochs)
-	#iris_model.test()
-	iris_model.pca_plot()
+	train = False
+	test = True
+	load = True 
+	save_path = "weights.h5"
+	iris_model = Iris_model(load,save_path,batch_size,lr,test_size=test_size)	
+	if train == True:
+		iris_model.train(epochs)
+		iris_model.save()
+	if test == True:
+		iris_model.vis_test()
+
 	print("Finished.")
